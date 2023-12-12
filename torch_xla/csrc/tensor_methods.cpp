@@ -2127,21 +2127,17 @@ XLATensorPtr permute(const XLATensorPtr& input,
 XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
   // We want to pass exponent_node as a constant to give XLA more room to
   // optimize
-  torch::lazy::Value exponent_node =
-      XLAGraphExecutor::Get()->GetIrValueForConstant(exponent);
-  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent_node);
-  auto* xla_node = dynamic_cast<XlaNode*>(node.get());
-  at::ScalarType dtype =
-      TorchTypeFromXlaType(xla_node->xla_shape().element_type());
-  return input->CreateFrom(node, dtype);
+  const torch::lazy::BackendDevice& device = input->GetDevice();
+  torch::lazy::Value exp_node = XLAGraphExecutor::Get()->GetIrValueForScalar(
+      exponent, device);
+
+  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exp_node);
+  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent) {
   torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent->GetIrValue());
-  auto* xla_node = dynamic_cast<XlaNode*>(node.get());
-  at::ScalarType dtype =
-      TorchTypeFromXlaType(xla_node->xla_shape().element_type());
-  return input->CreateFrom(node, dtype);
+  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
 }
 
 XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
